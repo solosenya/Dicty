@@ -1,11 +1,14 @@
 package ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model;
 
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import ru.msu.physfac.biophys.g403.solonets.dicty.cells.model.Cell;
 
 import javax.persistence.*;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "amoebas")
 public class Amoebae {
@@ -19,8 +22,14 @@ public class Amoebae {
     private Integer position;
 
     @Column(name = "state")
-    private String state;
+    private State state;
 
-    @ManyToOne
-    private Cell cell;
+    @Column(name = "cell_id")
+    private Integer cellId;
+
+    public enum State {
+        EXCITED,
+        RESTING,
+        READY
+    }
 }
