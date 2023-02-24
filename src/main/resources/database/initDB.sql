@@ -15,5 +15,6 @@ CREATE TABLE IF NOT EXISTS postgres.public.amoebas
     id BIGSERIAL PRIMARY KEY,
     position INTEGER NOT NULL,
     state VARCHAR(100) NOT NULL,
-    cell_id INTEGER NOT NULL
+    cell_id INTEGER NOT NULL,
+    time INTEGER NOT NULL
 );

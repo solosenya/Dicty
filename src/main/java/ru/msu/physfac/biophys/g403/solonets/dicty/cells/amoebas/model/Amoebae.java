@@ -1,9 +1,7 @@
 package ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model;
 
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
-import ru.msu.physfac.biophys.g403.solonets.dicty.cells.model.Cell;
 
 import javax.persistence.*;
 
@@ -22,10 +20,14 @@ public class Amoebae {
     private Integer position;
 
     @Column(name = "state")
+    @Enumerated(EnumType.STRING)
     private State state;
 
     @Column(name = "cell_id")
     private Integer cellId;
+
+    @Column(name = "time")
+    private Integer time;
 
     public enum State {
         EXCITED,

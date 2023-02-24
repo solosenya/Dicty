@@ -59,67 +59,24 @@ public class Image {
         return getTmpImage();
     }
 
-    public void dispose(Amoebae amoebae) {
+    public void dispose(Amoebae amoebae, Amoebae.State state) {
         Optional<Cell> cellOpt = cellRepository.findById(amoebae.getCellId());
         if (cellOpt.isEmpty()) {
             log.error("К амебе не привязана клетка!");
             throw new IllegalArgumentException("К амебе не привязана клетка!");
         }
-        Cell cell = cellOpt.orElse(null);
+        Cell cell = cellOpt.get();
         int x = cell.getX();
         int y = cell.getY();
         int position = amoebae.getPosition();
-        Amoebae.State state = amoebae.getState();
 
-        @Getter
-        class CellOffsetService {
-            private final int xOffset;
-            private final int yOffset;
-            final boolean vertical;
-            final Color color;
-
-            CellOffsetService (int position, Amoebae.State state) {
-                switch (position) {
-                    case 0 -> {
-                        xOffset = 0;
-                        yOffset = 0;
-                        vertical = false;
-                    }
-                    case 1 -> {
-                        xOffset = 2;
-                        yOffset = 0;
-                        vertical = true;
-                    }
-                    case 2 -> {
-                        xOffset = 1;
-                        yOffset = 2;
-                        vertical = false;
-                    }
-                    case 3 -> {
-                        xOffset = 0;
-                        yOffset = 1;
-                        vertical = true;
-                    }
-                    default -> {
-                        log.error("Номер позиции не может быть больше 3!");
-                        throw new IllegalArgumentException("Номер позиции не может быть больше 3!");
-                    }
-                }
-                switch (state) {
-                    case READY -> color = Color.BLUE;
-                    case RESTING -> color = Color.GREEN;
-                    case EXCITED -> color = Color.YELLOW;
-                    default -> {
-                        log.error("Других состояний быть не может!");
-                        throw new IllegalArgumentException("Других состояний быть не может!");
-                    }
-                }
-            }
-        }
 
         CellOffsetService cellOffsetService = new CellOffsetService(position, state);
-        int realX = 3 * x + cellOffsetService.xOffset;
-        int realY = 3 * y + cellOffsetService.yOffset;
+        int realX = 3 * x
+            + cellOffsetService.xOffset;
+
+        int realY = 3 * y
+            + cellOffsetService.yOffset;
 
         lattice = image.createGraphics();
         lattice.setColor(cellOffsetService.color);
@@ -128,6 +85,66 @@ public class Image {
         } else {
             lattice.fillRect(realX, realY, 2, 1);
         }
+        lattice.dispose();
+    }
+
+    @Getter
+    class CellOffsetService {
+        private final int xOffset;
+        private final int yOffset;
+        final boolean vertical;
+        final Color color;
+
+        CellOffsetService(int position, Amoebae.State state) {
+            switch (position) {
+                case 0 -> {
+                    xOffset = 0;
+                    yOffset = 0;
+                    vertical = false;
+                }
+                case 1 -> {
+                    xOffset = 2;
+                    yOffset = 0;
+                    vertical = true;
+                }
+                case 2 -> {
+                    xOffset = 1;
+                    yOffset = 2;
+                    vertical = false;
+                }
+                case 3 -> {
+                    xOffset = 0;
+                    yOffset = 1;
+                    vertical = true;
+                }
+                default -> {
+                    log.error("Номер позиции не может быть больше 3!");
+                    throw new IllegalArgumentException("Номер позиции не может быть больше 3!");
+                }
+            }
+            switch (state) {
+                case READY -> color = Color.BLUE;
+                case RESTING -> color = Color.YELLOW;
+                case EXCITED -> color = Color.GREEN;
+                default -> {
+                    log.error("Других состояний быть не может!");
+                    throw new IllegalArgumentException("Других состояний быть не может!");
+                }
+            }
+        }
+    }
+
+    public void putCampToCell(Cell cell, Integer level) {
+        int realX = 3 * cell.getX() + 1;
+        int realY = 3 * cell.getY() + 1;
+
+        int greyness = 255 - level;
+
+        Color grey = new Color(greyness, greyness, greyness);
+        lattice = image.createGraphics();
+        lattice.setColor(grey);
+
+        lattice.fillRect(realX, realY, 1, 1);
         lattice.dispose();
     }
 

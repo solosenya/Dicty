@@ -1,16 +1,10 @@
 package ru.msu.physfac.biophys.g403.solonets.dicty.cells.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import net.bytebuddy.implementation.bind.annotation.IgnoreForBinding;
-import ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model.Amoebae;
 
 import javax.persistence.*;
-import java.util.HashSet;
-import java.util.Set;
 
 @Setter
 @Getter
@@ -32,4 +26,11 @@ public class Cell {
 
     @Column(name = "camp_level", nullable = false)
     private Integer campLevel;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Cell cell)) return false;
+        return id.equals(cell.id) && x.equals(cell.x) && y.equals(cell.y) && campLevel.equals(cell.campLevel);
+    }
 }

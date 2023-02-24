@@ -12,8 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.msu.physfac.biophys.g403.solonets.dicty.grid.model.Lattice;
 import ru.msu.physfac.biophys.g403.solonets.dicty.grid.view.Image;
 
-import java.util.ArrayList;
-import java.util.List;
+import javax.transaction.Transactional;
 
 @Slf4j
 @RestController("app/v1")
@@ -52,6 +51,42 @@ public class GridController {
         }
 
         lattice.populate(population);
+
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .header(
+                HttpHeaders.CONTENT_DISPOSITION,
+                image.getPathToRepresentation()
+            )
+            .contentType(MediaType.IMAGE_PNG)
+            .body(
+                lattice.getImage()
+                    .getTmpImage()
+            );
+    }
+
+    @Transactional
+    @GetMapping("/putCAMP")
+    public ResponseEntity<byte[]> putCamp(int deviation) {
+        lattice.putCamp(deviation);
+
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .header(
+                HttpHeaders.CONTENT_DISPOSITION,
+                image.getPathToRepresentation()
+            )
+            .contentType(MediaType.IMAGE_PNG)
+            .body(
+                lattice.getImage()
+                    .getTmpImage()
+            );
+    }
+
+    @Transactional
+    @GetMapping("/times")
+    public ResponseEntity<byte[]> moveTimes(int threshold) {
+        lattice.move(threshold);
 
         return ResponseEntity
             .status(HttpStatus.OK)
