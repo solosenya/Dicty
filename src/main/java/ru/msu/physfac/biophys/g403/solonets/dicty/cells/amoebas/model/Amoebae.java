@@ -32,6 +32,7 @@ public class Amoebae {
     public enum State {
         EXCITED,
         RESTING,
-        READY
+        READY,
+        EMPTY
     }
 }

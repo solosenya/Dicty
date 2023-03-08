@@ -126,12 +126,23 @@ public class Image {
                 case READY -> color = Color.BLUE;
                 case RESTING -> color = Color.YELLOW;
                 case EXCITED -> color = Color.GREEN;
+                case EMPTY -> color = Color.WHITE;
                 default -> {
                     log.error("Других состояний быть не может!");
                     throw new IllegalArgumentException("Других состояний быть не может!");
                 }
             }
         }
+    }
+
+    public void replaceAmoebae(Amoebae amoebae, int lastCellId, int lastPosition) {
+        Amoebae lastPlace = new Amoebae();
+        lastPlace.setCellId(lastCellId);
+        lastPlace.setPosition(lastPosition);
+
+        dispose(lastPlace, Amoebae.State.EMPTY);
+        Amoebae.State newState = amoebae.getState();
+        dispose(amoebae, newState);
     }
 
     public void putCampToCell(Cell cell, Integer level) {

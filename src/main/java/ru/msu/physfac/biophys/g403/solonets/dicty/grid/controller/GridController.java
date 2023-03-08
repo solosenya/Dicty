@@ -84,8 +84,8 @@ public class GridController {
     }
 
     @Transactional
-    @GetMapping("/times")
-    public ResponseEntity<byte[]> moveTimes(int threshold) {
+    @GetMapping("/move")
+    public ResponseEntity<byte[]> move(int threshold) throws Exception {
         lattice.move(threshold);
 
         return ResponseEntity

@@ -21,4 +21,8 @@ public interface AmoebaeRepository extends JpaRepository<Amoebae, Integer> {
     @Modifying
     @Query("update Amoebae a set a.time = ?1 where a.id = ?2")
     void setTime(Integer time, Integer id);
+
+    @Modifying
+    @Query("update Amoebae a set a.state = ?1, a.time = ?2, a.position = ?3, a.cellId = ?4 where a.id = ?5")
+    void updateAmoebae(Amoebae.State state, Integer time, Integer position, Integer cellId, Integer id);
 }
