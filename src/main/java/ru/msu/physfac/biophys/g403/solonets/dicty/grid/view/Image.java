@@ -23,8 +23,10 @@ public class Image {
     BufferedImage image;
     byte[] imageInByte;
     Graphics2D lattice;
-    private final File FILE = new File(
-        "C:\\" +
+
+    private static int time = 0;
+
+    private final String path = "C:\\" +
         "Users\\" +
         "solos\\" +
         "IdeaProjects\\" +
@@ -33,8 +35,9 @@ public class Image {
         "main\\" +
         "resources\\" +
         "representation\\" +
-        "representation.png"
-    );
+        "representation";
+
+    private final String extension = ".png";
 
     @Autowired
     CellRepository cellRepository;
@@ -124,7 +127,7 @@ public class Image {
             }
             switch (state) {
                 case READY -> color = Color.BLUE;
-                case RESTING -> color = Color.YELLOW;
+                case RESTING -> color = Color.MAGENTA;
                 case EXCITED -> color = Color.GREEN;
                 case EMPTY -> color = Color.WHITE;
                 default -> {
@@ -150,6 +153,7 @@ public class Image {
         int realY = 3 * cell.getY() + 1;
 
         int greyness = 255 - level;
+        if (greyness < 0) greyness = 0;
 
         Color grey = new Color(greyness, greyness, greyness);
         lattice = image.createGraphics();
@@ -163,8 +167,11 @@ public class Image {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
         try {
-            ImageIO.write(image, "png", FILE);
+            String wholePath = path + time + extension;
+            File file = new File(wholePath);
+            ImageIO.write(image, "png", file);
             ImageIO.write(image, "png", byteArrayOutputStream);
+            time++;
         } catch (IOException e) {
             log.error("Could not create the lattice");
         }

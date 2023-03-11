@@ -19,7 +19,8 @@ import static ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model.Amo
 public class Lattice {
     private final Random random = new Random();
 
-    private final int RESTING_TIME = 10;
+    private final int RESTING_TIME = 13;
+    private final int EXCITED_TIME = 8;
 
     private int width;
     private int length;
@@ -146,6 +147,8 @@ public class Lattice {
             List<Cell> neighboursCopy = new ArrayList<>(List.copyOf(neighbours));
             neighboursCopy.add(cell);
 
+            List<Cell> farNeighbours = findFarNeighbours(cell, cells);
+
             Optional<Cell> targetCellOpt = getCellWithHighestLevel(neighboursCopy, threshold);
             if (targetCellOpt.isEmpty()) continue;
             Cell targetCell = targetCellOpt.get();
@@ -157,27 +160,54 @@ public class Lattice {
                     amoebaeId,
                     cell,
                     amoebae,
-                    neighbours
+                    neighbours,
+                    farNeighbours
                 );
             } else readyToExcited(
                 amoebae,
                 amoebaeId,
                 neighbours,
-                threshold
+                threshold,
+                farNeighbours
             );
         }
 
         degradeCamp(cells);
     }
 
-    private void degradeCamp(List<Cell> cells) {
-        for (Cell cell: cells) {
-            int newLevel = cell.getCampLevel() - 1;
-            if (newLevel < 0) {
-                newLevel = 0;
+    private List<Cell> findFarNeighbours(Cell targetCell, List<Cell> cells) {
+        List<Cell> farNeighbours = new ArrayList<>();
+
+        for (Cell cell : cells) {
+            if (farNeighbours.size() == 16) break;
+            if (cell.equals(targetCell)) {
+                continue;
             }
 
-            updateCellLevel(cell, newLevel);
+            int xDif = cell.getX() - targetCell.getX();
+            int yDif = cell.getY() - targetCell.getY();
+
+            boolean xDifIsValid = xDif == 2 && yDif <= 2 && yDif >= -2;
+            boolean yDifIsValid = yDif == 2 && xDif <= 2 && xDif >= -2;
+            if (xDifIsValid || yDifIsValid) {
+                farNeighbours.add(cell);
+            }
+        }
+
+        return farNeighbours;
+    }
+
+    private void degradeCamp(List<Cell> cells) {
+        for (Cell cell: cells) {
+            boolean doDegrade = random.nextInt(1, 101) > 70;
+
+            if (doDegrade) {
+                int newLevel = cell.getCampLevel() - 1;
+                if (newLevel < 0) {
+                    newLevel = 0;
+                }
+                updateCellLevel(cell, newLevel);
+            }
         }
     }
 
@@ -187,7 +217,8 @@ public class Lattice {
         Integer amoebaeId,
         Cell cell,
         Amoebae amoebae,
-        List<Cell> neighbours
+        List<Cell> neighbours,
+        List<Cell> farNeighbours
     ) {
         Integer level = targetCell.getCampLevel();
         if (level >= threshold) {
@@ -199,17 +230,28 @@ public class Lattice {
             amoebaeRepository.setState(RESTING, amoebaeId);
             image.dispose(amoebae, RESTING);
 
-            updateNeighboursLevel(neighbours, threshold);
+            updateNeighboursLevel(neighbours, threshold, farNeighbours);
             updateCellLevel(cell, newLevel);
         }
     }
 
-    private void updateNeighboursLevel(List<Cell> neighbours, int threshold) {
+    private void updateNeighboursLevel(
+        List<Cell> neighbours,
+        int threshold,
+        List<Cell> farNeighbours
+    ) {
         for (Cell neighbour : neighbours) {
-            Integer newNeighbourLevel = threshold / 2 + neighbour.getCampLevel();
+            int newNeighbourLevel = threshold + neighbour.getCampLevel();
             Integer neighbourId = neighbour.getId();
             cellRepository.setLevel(newNeighbourLevel, neighbourId);
             image.putCampToCell(neighbour, newNeighbourLevel);
+        }
+
+        for (Cell farNeighbour: farNeighbours) {
+            int newNeighbourLevel = threshold / 2 + farNeighbour.getCampLevel();
+            Integer neighbourId = farNeighbour.getId();
+            cellRepository.setLevel(newNeighbourLevel, neighbourId);
+            image.putCampToCell(farNeighbour, newNeighbourLevel);
         }
     }
 
@@ -217,12 +259,13 @@ public class Lattice {
         Amoebae amoebae,
         Integer amoebaeId,
         List<Cell> neighbours,
-        int threshold
+        int threshold,
+        List<Cell> farNeighbours
     ) {
         amoebaeRepository.setState(EXCITED, amoebaeId);
         image.dispose(amoebae, EXCITED);
 
-        updateNeighboursLevel(neighbours, threshold);
+        updateNeighboursLevel(neighbours, threshold, farNeighbours);
     }
 
     private void excitedToResting(
@@ -232,6 +275,14 @@ public class Lattice {
         List<Cell> cells
     ) throws Exception {
         for (Amoebae amoebae : excitedAmoebas) {
+            int time = amoebae.getTime();
+            if (time < EXCITED_TIME) {
+                int newTime = ++time;
+                int id = amoebae.getId();
+                amoebaeRepository.setTime(newTime, id);
+                continue;
+            }
+
             Integer cellId = amoebae.getCellId();
             Integer amoebaeId = amoebae.getId();
             Optional<Cell> cellOpt = cellRepository.findById(cellId);
