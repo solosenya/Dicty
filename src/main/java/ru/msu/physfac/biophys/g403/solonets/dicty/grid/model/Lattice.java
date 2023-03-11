@@ -115,7 +115,7 @@ public class Lattice {
         }
     }
 
-    public void move(int threshold) throws Exception {
+    public void move(int threshold) {
         List<Cell> cells = cellRepository.findAll();
 
         List<Amoebae> amoebas = amoebaeRepository.findAll();
@@ -173,6 +173,7 @@ public class Lattice {
         }
 
         degradeCamp(cells);
+        diffuseCamp(cells);
     }
 
     private List<Cell> findFarNeighbours(Cell targetCell, List<Cell> cells) {
@@ -273,7 +274,7 @@ public class Lattice {
         Integer threshold,
         List<Amoebae> amoebas,
         List<Cell> cells
-    ) throws Exception {
+    ) {
         for (Amoebae amoebae : excitedAmoebas) {
             int time = amoebae.getTime();
             if (time < EXCITED_TIME) {
@@ -351,7 +352,7 @@ public class Lattice {
         return Optional.of(position);
     }
 
-    private Optional<Cell> getCellWithHighestLevel(List<Cell> cells, int threshold) throws Exception {
+    private Optional<Cell> getCellWithHighestLevel(List<Cell> cells, int threshold) {
         Optional<Cell> highestLevelCellOpt = cells
             .stream()
                 .filter(cell -> cell.getCampLevel() >= threshold)
@@ -410,5 +411,38 @@ public class Lattice {
         }
 
         return neighbours;
+    }
+
+    public void diffuseCamp(List<Cell> cells) {
+        Optional<Cell> cellWithHighestLevelOpt = getCellWithHighestLevel(cells, 0);
+        if (cellWithHighestLevelOpt.isEmpty()) return;
+        Cell cellWithHighestLevel = cellWithHighestLevelOpt.get();
+
+        List<Cell> neighbours = findNeighbours(cellWithHighestLevel, cells);
+        List<Cell> farNeighbours = findFarNeighbours(cellWithHighestLevel, cells);
+
+        int sumLevel = cellWithHighestLevel.getCampLevel();
+
+        for (Cell neighbour: neighbours) {
+            sumLevel += neighbour.getCampLevel();
+        }
+
+        for (Cell farNeighbour: farNeighbours) {
+            sumLevel += farNeighbour.getCampLevel();
+        }
+
+        int size = 1 + neighbours.size() + farNeighbours.size();
+
+        int newLevel = sumLevel / size;
+
+        updateCellLevel(cellWithHighestLevel, newLevel);
+
+        for (Cell neighbour: neighbours) {
+            updateCellLevel(neighbour, newLevel);
+        }
+
+        for (Cell farNeighbour: farNeighbours) {
+            updateCellLevel(farNeighbour, newLevel);
+        }
     }
 }
