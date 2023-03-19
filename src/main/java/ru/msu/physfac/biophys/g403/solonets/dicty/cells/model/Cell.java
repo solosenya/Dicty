@@ -31,6 +31,9 @@ public class Cell {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Cell cell)) return false;
-        return id.equals(cell.id) && x.equals(cell.x) && y.equals(cell.y) && campLevel.equals(cell.campLevel);
+        return id.equals(cell.id)
+            && x.equals(cell.x)
+            && y.equals(cell.y)
+            && campLevel.equals(cell.campLevel);
     }
 }

@@ -11,6 +11,7 @@ import ru.msu.physfac.biophys.g403.solonets.dicty.cells.repository.CellRepositor
 import ru.msu.physfac.biophys.g403.solonets.dicty.grid.view.Image;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model.Amoebae.State.*;
 
@@ -173,29 +174,15 @@ public class Lattice {
         }
 
         degradeCamp(cells);
-        diffuseCamp(cells);
+        diffuseCamp(cells, threshold);
     }
 
     private List<Cell> findFarNeighbours(Cell targetCell, List<Cell> cells) {
-        List<Cell> farNeighbours = new ArrayList<>();
-
-        for (Cell cell : cells) {
-            if (farNeighbours.size() == 16) break;
-            if (cell.equals(targetCell)) {
-                continue;
-            }
-
-            int xDif = cell.getX() - targetCell.getX();
-            int yDif = cell.getY() - targetCell.getY();
-
-            boolean xDifIsValid = xDif == 2 && yDif <= 2 && yDif >= -2;
-            boolean yDifIsValid = yDif == 2 && xDif <= 2 && xDif >= -2;
-            if (xDifIsValid || yDifIsValid) {
-                farNeighbours.add(cell);
-            }
-        }
-
-        return farNeighbours;
+        return cells.stream()
+            .filter(c -> Math.abs(targetCell.getX() - c.getX()) <= 3)
+            .filter(c -> Math.abs(targetCell.getY() - c.getY()) <= 3)
+            .filter(c -> Math.abs(targetCell.getX() - c.getX()) >= 1
+                && Math.abs(targetCell.getY() - c.getY()) >= 1).collect(Collectors.toList());
     }
 
     private void degradeCamp(List<Cell> cells) {
@@ -299,9 +286,22 @@ public class Lattice {
             Integer targetCellId = targetCell.getId();
             Optional<Integer> positionOpt = getPosition(targetCellId, amoebas);
 
-            if (positionOpt.isEmpty()) continue;
+            int position;
+            if (positionOpt.isEmpty()) {
+                neighbours.remove(targetCell);
 
-            int position = positionOpt.get();
+                Optional<Cell> newTargetCellOpt = getCellWithHighestLevel(neighbours, threshold);
+                if (newTargetCellOpt.isEmpty()) continue;
+                targetCell = newTargetCellOpt.get();
+
+                targetCellId = targetCell.getId();
+                Optional<Integer> newPositionOpt = getPosition(targetCellId, amoebas);
+                if (newPositionOpt.isEmpty()) continue;
+                position = newPositionOpt.get();
+            } else {
+                position = positionOpt.get();
+            }
+
             int lastPosition = amoebae.getPosition();
 
             amoebae.setState(RESTING);
@@ -374,6 +374,19 @@ public class Lattice {
         return Optional.of(highestLevelCell);
     }
 
+    private Optional<Cell> getCellWithLowestLevel(List<Cell> cells) {
+        Optional<Cell> lowestLevelCellOpt = cells
+            .stream()
+            .reduce((a, b) ->
+                b.getCampLevel() > a.getCampLevel() ? a : b
+            );
+
+        if (lowestLevelCellOpt.isEmpty()) return lowestLevelCellOpt;
+        Cell highestLevelCell = lowestLevelCellOpt.get();
+
+        return Optional.of(highestLevelCell);
+    }
+
     private void restingToReady(List<Amoebae> restingAmoebas) {
         for (Amoebae amoebae : restingAmoebas) {
             int time = amoebae.getTime();
@@ -413,36 +426,26 @@ public class Lattice {
         return neighbours;
     }
 
-    public void diffuseCamp(List<Cell> cells) {
-        Optional<Cell> cellWithHighestLevelOpt = getCellWithHighestLevel(cells, 0);
-        if (cellWithHighestLevelOpt.isEmpty()) return;
-        Cell cellWithHighestLevel = cellWithHighestLevelOpt.get();
+    public void diffuseCamp(List<Cell> cells, int threshold) {
+        List<Cell> highCells = cells
+            .stream()
+            .filter(c -> c.getCampLevel() > threshold)
+            .limit(30)
+            .toList();
 
-        List<Cell> neighbours = findNeighbours(cellWithHighestLevel, cells);
-        List<Cell> farNeighbours = findFarNeighbours(cellWithHighestLevel, cells);
+        highCells.forEach(c -> {
+            List<Cell> neighbours = findNeighbours(c, cells);
 
-        int sumLevel = cellWithHighestLevel.getCampLevel();
+            Cell lowestCell = getCellWithLowestLevel(neighbours)
+                .orElse(c);
 
-        for (Cell neighbour: neighbours) {
-            sumLevel += neighbour.getCampLevel();
-        }
+            if (lowestCell.equals(c)) return;
 
-        for (Cell farNeighbour: farNeighbours) {
-            sumLevel += farNeighbour.getCampLevel();
-        }
+            int newHighLevel = c.getCampLevel() - threshold / 30;
+            int newLowLevel = lowestCell.getCampLevel() + threshold / 30;
 
-        int size = 1 + neighbours.size() + farNeighbours.size();
-
-        int newLevel = sumLevel / size;
-
-        updateCellLevel(cellWithHighestLevel, newLevel);
-
-        for (Cell neighbour: neighbours) {
-            updateCellLevel(neighbour, newLevel);
-        }
-
-        for (Cell farNeighbour: farNeighbours) {
-            updateCellLevel(farNeighbour, newLevel);
-        }
+            updateCellLevel(c, newHighLevel);
+            updateCellLevel(lowestCell, newLowLevel);
+        });
     }
 }
