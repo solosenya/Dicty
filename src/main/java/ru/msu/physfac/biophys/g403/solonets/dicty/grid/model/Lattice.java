@@ -150,7 +150,7 @@ public class Lattice {
 
             List<Cell> farNeighbours = findFarNeighbours(cell, cells);
 
-            Optional<Cell> targetCellOpt = getCellWithHighestLevel(neighboursCopy, threshold);
+            Optional<Cell> targetCellOpt = getCellWithHighestLevel(neighboursCopy, threshold, amoebas);
             if (targetCellOpt.isEmpty()) continue;
             Cell targetCell = targetCellOpt.get();
 
@@ -279,28 +279,15 @@ public class Lattice {
             Cell cell = cellOpt.get();
 
             List<Cell> neighbours = findNeighbours(cell, cells);
-            Optional<Cell> targetCellOpt = getCellWithHighestLevel(neighbours, threshold);
+            Optional<Cell> targetCellOpt = getCellWithHighestLevel(neighbours, threshold, amoebas);
             if (targetCellOpt.isEmpty()) continue;
             Cell targetCell = targetCellOpt.get();
 
             Integer targetCellId = targetCell.getId();
             Optional<Integer> positionOpt = getPosition(targetCellId, amoebas);
 
-            int position;
-            if (positionOpt.isEmpty()) {
-                neighbours.remove(targetCell);
-
-                Optional<Cell> newTargetCellOpt = getCellWithHighestLevel(neighbours, threshold);
-                if (newTargetCellOpt.isEmpty()) continue;
-                targetCell = newTargetCellOpt.get();
-
-                targetCellId = targetCell.getId();
-                Optional<Integer> newPositionOpt = getPosition(targetCellId, amoebas);
-                if (newPositionOpt.isEmpty()) continue;
-                position = newPositionOpt.get();
-            } else {
-                position = positionOpt.get();
-            }
+            if (positionOpt.isEmpty()) continue;
+            int position = positionOpt.get();
 
             int lastPosition = amoebae.getPosition();
 
@@ -352,26 +339,14 @@ public class Lattice {
         return Optional.of(position);
     }
 
-    private Optional<Cell> getCellWithHighestLevel(List<Cell> cells, int threshold) {
-        Optional<Cell> highestLevelCellOpt = cells
+    private Optional<Cell> getCellWithHighestLevel(List<Cell> cells, int threshold, List<Amoebae> amoebas) {
+        return cells
             .stream()
-                .filter(cell -> cell.getCampLevel() >= threshold)
+            .filter(cell -> cell.getCampLevel() >= threshold)
+            .filter(cell -> getPosition(cell.getId(), amoebas).isPresent())
             .reduce((a, b) ->
                 b.getCampLevel() > a.getCampLevel() ? b : a
             );
-
-        if (highestLevelCellOpt.isEmpty()) return highestLevelCellOpt;
-
-        Cell highestLevelCell = highestLevelCellOpt.get();
-
-        Integer level = highestLevelCell.getCampLevel();
-        boolean levelIsHigherThenThreshold = level >= threshold;
-
-        if (!levelIsHigherThenThreshold) {
-            return Optional.empty();
-        }
-
-        return Optional.of(highestLevelCell);
     }
 
     private Optional<Cell> getCellWithLowestLevel(List<Cell> cells) {
