@@ -101,6 +101,10 @@ public class Lattice {
         List<Cell> cells = cellRepository.findAll();
 
         for (Cell cell : cells) {
+            boolean shouldPutCamp = random.nextInt(0, 10) < 2;
+
+            if (!shouldPutCamp) continue;
+
             double level = Math.abs(
                 random.nextGaussian(0, deviation)
             );
@@ -127,7 +131,9 @@ public class Lattice {
         List<Amoebae> excitedAmoebas = amoebaeRepository.findAllByState(EXCITED)
             .orElse(new ArrayList<>());
 
-        excitedToResting(excitedAmoebas, threshold, amoebas, cells);
+        Map<Integer, Set<Amoebae>> groupedAmoebasByCellId = createGroupedAmoebasByCellId(cells, amoebas);
+
+        excitedToResting(excitedAmoebas, threshold, cells, groupedAmoebasByCellId);
 
         restingToReady(restingAmoebas);
 
@@ -150,7 +156,7 @@ public class Lattice {
 
             List<Cell> farNeighbours = findFarNeighbours(cell, cells);
 
-            Optional<Cell> targetCellOpt = getCellWithHighestLevel(neighboursCopy, threshold, amoebas);
+            Optional<Cell> targetCellOpt = getCellWithHighestLevel(neighboursCopy, threshold, groupedAmoebasByCellId);
             if (targetCellOpt.isEmpty()) continue;
             Cell targetCell = targetCellOpt.get();
 
@@ -229,14 +235,14 @@ public class Lattice {
         List<Cell> farNeighbours
     ) {
         for (Cell neighbour : neighbours) {
-            int newNeighbourLevel = threshold + neighbour.getCampLevel();
+            int newNeighbourLevel = threshold / 2 + neighbour.getCampLevel();
             Integer neighbourId = neighbour.getId();
             cellRepository.setLevel(newNeighbourLevel, neighbourId);
             image.putCampToCell(neighbour, newNeighbourLevel);
         }
 
         for (Cell farNeighbour: farNeighbours) {
-            int newNeighbourLevel = threshold / 2 + farNeighbour.getCampLevel();
+            int newNeighbourLevel = threshold / 4 + farNeighbour.getCampLevel();
             Integer neighbourId = farNeighbour.getId();
             cellRepository.setLevel(newNeighbourLevel, neighbourId);
             image.putCampToCell(farNeighbour, newNeighbourLevel);
@@ -259,8 +265,8 @@ public class Lattice {
     private void excitedToResting(
         List<Amoebae> excitedAmoebas,
         Integer threshold,
-        List<Amoebae> amoebas,
-        List<Cell> cells
+        List<Cell> cells,
+        Map<Integer, Set<Amoebae>> groupedAmoebasByCellId
     ) {
         for (Amoebae amoebae : excitedAmoebas) {
             int time = amoebae.getTime();
@@ -279,12 +285,12 @@ public class Lattice {
             Cell cell = cellOpt.get();
 
             List<Cell> neighbours = findNeighbours(cell, cells);
-            Optional<Cell> targetCellOpt = getCellWithHighestLevel(neighbours, threshold, amoebas);
+            Optional<Cell> targetCellOpt = getCellWithHighestLevel(neighbours, threshold, groupedAmoebasByCellId);
             if (targetCellOpt.isEmpty()) continue;
             Cell targetCell = targetCellOpt.get();
 
             Integer targetCellId = targetCell.getId();
-            Optional<Integer> positionOpt = getPosition(targetCellId, amoebas);
+            Optional<Integer> positionOpt = getPosition(targetCellId, groupedAmoebasByCellId);
 
             if (positionOpt.isEmpty()) continue;
             int position = positionOpt.get();
@@ -295,6 +301,8 @@ public class Lattice {
             amoebae.setTime(0);
             amoebae.setPosition(position);
             amoebae.setCellId(targetCellId);
+            groupedAmoebasByCellId.get(cellId).remove(amoebae);
+            groupedAmoebasByCellId.get(targetCellId).add(amoebae);
 
             amoebaeRepository.updateAmoebae(
                 RESTING,
@@ -320,30 +328,31 @@ public class Lattice {
         image.putCampToCell(cell, newLevel);
     }
 
-    private Optional<Integer> getPosition(Integer cellId, List<Amoebae> amoebas) {
-        List<Amoebae> foundAmoebas = new ArrayList<>();
-        List<Integer> positions = new ArrayList<>(List.of(1, 2, 3, 4));
-        for (Amoebae amoebae: amoebas) {
-            if (amoebae.getCellId().equals(cellId)) {
-                foundAmoebas.add(amoebae);
-                Integer position = amoebae.getPosition();
-                positions.remove(position);
-            }
-        }
+    private Optional<Integer> getPosition(Integer cellId, Map<Integer, Set<Amoebae>> groupedAmoebasByCellId) {
+        List<Integer> positions = new ArrayList<>(List.of(0, 1, 2, 3));
 
-        if (foundAmoebas.size() > 3) return Optional.empty();
+        Set<Amoebae> amoebas = groupedAmoebasByCellId.get(cellId);
+        if (amoebas.size() == 4) return Optional.empty();
 
-        int positionsSize = positions.size();
-        int position = random.nextInt(0, positionsSize);
+        amoebas.forEach(a -> positions.remove(a.getPosition()));
 
-        return Optional.of(position);
+        return Optional.of(
+            positions.get(
+                random.nextInt(
+                    0,
+                    positions.size()
+                )));
     }
 
-    private Optional<Cell> getCellWithHighestLevel(List<Cell> cells, int threshold, List<Amoebae> amoebas) {
+    private Optional<Cell> getCellWithHighestLevel(
+        List<Cell> cells,
+        int threshold,
+        Map<Integer, Set<Amoebae>> groupedAmoebasByCellId
+    ) {
         return cells
             .stream()
             .filter(cell -> cell.getCampLevel() >= threshold)
-            .filter(cell -> getPosition(cell.getId(), amoebas).isPresent())
+            .filter(cell -> getPosition(cell.getId(), groupedAmoebasByCellId).isPresent())
             .reduce((a, b) ->
                 b.getCampLevel() > a.getCampLevel() ? b : a
             );
@@ -422,5 +431,16 @@ public class Lattice {
             updateCellLevel(c, newHighLevel);
             updateCellLevel(lowestCell, newLowLevel);
         });
+    }
+
+    public Map<Integer, Set<Amoebae>> createGroupedAmoebasByCellId(List<Cell> cells, List<Amoebae> amoebas) {
+        Map<Integer, Set<Amoebae>> groupedAmoebasByCellId = new HashMap<>();
+
+        cells.forEach(c -> groupedAmoebasByCellId.put(c.getId(), new HashSet<>()));
+
+        amoebas.forEach(a -> groupedAmoebasByCellId.get(a.getCellId())
+            .add(a));
+
+        return groupedAmoebasByCellId;
     }
 }
