@@ -71,9 +71,10 @@ public class Lattice {
         List<Amoebae> amoebas = amoebaeRepository.findAll();
         SystemInfoDto systemInfoDto = new SystemInfoDto(cells, amoebas);
 
-        degradeCamp(cells);
+//        degradeCamp(cells, systemInfoDto);
 //        diffuseCamp(cells, threshold, systemInfoDto);
         setDuties(systemInfoDto, threshold);
+        createPseudoBatch(systemInfoDto);
     }
 
     private void setDuties(SystemInfoDto systemInfoDto, int threshold) {
@@ -81,6 +82,18 @@ public class Lattice {
         excitedToResting(systemInfoDto, threshold);
         restingToReady(systemInfoDto);
         readyToDestination(systemInfoDto, threshold);
+    }
+
+    private void createPseudoBatch(SystemInfoDto systemInfoDto) {
+        Map<Cell, Integer> newCells = systemInfoDto.getNewCells();
+
+        for (Map.Entry<Cell, Integer> newCell : newCells.entrySet()) {
+            Integer newLevel = newCell.getKey().getCampLevel() + newCell.getValue();
+            cellRepository.setLevel(
+                newLevel,
+                newCell.getKey().getId()
+            );
+        }
     }
 
     private void setPace(
@@ -101,17 +114,9 @@ public class Lattice {
             List<Cell> neighbours = systemInfoDto.getNeighboursByCentralId(cellId);
             List<Cell> farNeighbours = systemInfoDto.getFarNeighboursByCentralId(cellId);
 
-            neighbours.forEach(n -> {
-                int newNeighbourLevel = n.getCampLevel() + threshold * 6;
-                cellRepository.setLevel(newNeighbourLevel, n.getId());
-                image.putCampToCell(n, newNeighbourLevel);
-            });
+            neighbours.forEach(n -> updateCellLevel(n, threshold * 6, systemInfoDto));
 
-            farNeighbours.forEach(fn -> {
-                int newNeighbourLevel = fn.getCampLevel() + threshold * 3;
-                cellRepository.setLevel(newNeighbourLevel, fn.getId());
-                image.putCampToCell(fn, newNeighbourLevel);
-            });
+            farNeighbours.forEach(fn -> updateCellLevel(fn, threshold * 3, systemInfoDto));
         }
     }
 
@@ -149,6 +154,10 @@ public class Lattice {
             amoebae.setPosition(position);
             amoebae.setCellId(targetCellId);
             groupedAmoebasByCellId.get(cellId).remove(amoebae);
+
+            if (!groupedAmoebasByCellId.containsKey(targetCellId)) {
+                groupedAmoebasByCellId.put(targetCellId, new ArrayList<>());
+            }
             groupedAmoebasByCellId.get(targetCellId).add(amoebae);
 
             amoebaeRepository.updateAmoebae(
@@ -160,12 +169,7 @@ public class Lattice {
             );
             image.replaceAmoebae(amoebae, cellId, lastPosition);
 
-            int newLevel = cell.getCampLevel() + threshold;
-            if (newLevel < 0) {
-                newLevel = 0;
-            }
-
-            updateCellLevel(cell, newLevel);
+            updateCellLevel(cell, threshold, systemInfo);
         }
     }
 
@@ -231,16 +235,11 @@ public class Lattice {
 
         Integer level = cell.getCampLevel();
         if (level >= threshold) {
-            int newLevel = level + threshold;
-            if (newLevel < 0) {
-                newLevel = 0;
-            }
-
             amoebaeRepository.setState(RESTING, amoebaeId);
             image.dispose(amoebae, RESTING);
 
-            updateNeighboursLevel(neighbours, threshold, farNeighbours);
-            updateCellLevel(cell, newLevel);
+            updateNeighboursLevel(neighbours, threshold, farNeighbours, systemInfoDto);
+            updateCellLevel(cell, threshold, systemInfoDto);
         }
     }
 
@@ -259,7 +258,7 @@ public class Lattice {
         amoebaeRepository.setStateAndDestination(EXCITED, dest, amoebaeId);
         image.dispose(amoebae, EXCITED);
 
-        updateNeighboursLevel(neighbours, threshold, farNeighbours);
+        updateNeighboursLevel(neighbours, threshold, farNeighbours, systemInfoDto);
     }
 
     private Amoebae.Destination calcDestination(Cell cell, Cell targetCell) {
@@ -286,16 +285,12 @@ public class Lattice {
         return null;
     }
 
-    private void degradeCamp(List<Cell> cells) {
+    private void degradeCamp(List<Cell> cells, SystemInfoDto systemInfo) {
         for (Cell cell: cells) {
             boolean doDegrade = random.nextInt(1, 101) > 0;
 
             if (doDegrade) {
-                int newLevel = cell.getCampLevel() - 12;
-                if (newLevel < 0) {
-                    newLevel = 0;
-                }
-                updateCellLevel(cell, newLevel);
+                updateCellLevel(cell, -3, systemInfo);
             }
         }
     }
@@ -303,43 +298,40 @@ public class Lattice {
     private void updateNeighboursLevel(
         List<Cell> neighbours,
         int threshold,
-        List<Cell> farNeighbours
+        List<Cell> farNeighbours,
+        SystemInfoDto systemInfoDto
     ) {
         for (Cell neighbour : neighbours) {
-            int newNeighbourLevel = threshold + neighbour.getCampLevel();
-            Integer neighbourId = neighbour.getId();
-            cellRepository.setLevel(newNeighbourLevel, neighbourId);
-            image.putCampToCell(neighbour, newNeighbourLevel);
+            updateCellLevel(neighbour, threshold, systemInfoDto);
         }
 
         for (Cell farNeighbour: farNeighbours) {
-            int newNeighbourLevel = threshold + farNeighbour.getCampLevel();
-            Integer neighbourId = farNeighbour.getId();
-            cellRepository.setLevel(newNeighbourLevel, neighbourId);
-            image.putCampToCell(farNeighbour, newNeighbourLevel);
+            updateCellLevel(farNeighbour, threshold / 2, systemInfoDto);
         }
     }
 
-    private void updateCellLevel(Cell cell, Integer newLevel) {
-        Integer cellId = cell.getId();
-        cellRepository.setLevel(newLevel, cellId);
-        image.putCampToCell(cell, newLevel);
+    private void updateCellLevel(Cell cell, Integer addition, SystemInfoDto systemInfo) {
+        systemInfo.updateCell(cell, addition);
+        image.putCampToCell(cell, cell.getCampLevel() + addition);
     }
 
     private Optional<Integer> getPosition(Integer cellId, Map<Integer, List<Amoebae>> groupedAmoebasByCellId) {
         List<Integer> positions = new ArrayList<>(List.of(0, 1, 2, 3));
 
         List<Amoebae> amoebas = groupedAmoebasByCellId.get(cellId);
-        if (amoebas == null || amoebas.size() == 4) return Optional.empty();
+        if (amoebas == null || amoebas.size() < 4) {
+            if (amoebas != null) {
+                amoebas.forEach(a -> positions.remove(a.getPosition()));
+            }
+            return Optional.of(
+                positions.get(
+                    random.nextInt(
+                        0,
+                        positions.size()
+                    )));
+        }
 
-        amoebas.forEach(a -> positions.remove(a.getPosition()));
-
-        return Optional.of(
-            positions.get(
-                random.nextInt(
-                    0,
-                    positions.size()
-                )));
+        return Optional.empty();
     }
 
     private Optional<Cell> getCellWithHighestLevel(
@@ -379,11 +371,11 @@ public class Lattice {
 
         boolean noTarget = targetOpt.isEmpty();
         if (noTarget) return Optional.empty();
-
+//
         Cell target = targetOpt.get();
-        boolean shouldStay = central.getCampLevel() > target.getCampLevel();
-        if (shouldStay) return Optional.of(central);
-
+//        boolean shouldStay = central.getCampLevel() > target.getCampLevel();
+//        if (shouldStay) return Optional.of(central);
+//
         return Optional.of(target);
     }
 
@@ -416,11 +408,8 @@ public class Lattice {
 
             if (lowestCell.equals(cell)) return;
 
-            int newHighLevel = cell.getCampLevel() - threshold / 30;
-            int newLowLevel = lowestCell.getCampLevel() + threshold / 30;
-
-            updateCellLevel(cell, newHighLevel);
-            updateCellLevel(lowestCell, newLowLevel);
+            updateCellLevel(cell, - threshold / 30, systemInfoDto);
+            updateCellLevel(lowestCell, + threshold / 30, systemInfoDto);
         }
     }
 }

@@ -156,6 +156,8 @@ public class Image {
         int greyness = 255 - level;
         if (greyness < 0) greyness = 0;
 
+        if (greyness > 255) greyness = 255;
+
         Color grey = new Color(greyness, greyness, greyness);
         lattice = image.createGraphics();
         lattice.setColor(grey);

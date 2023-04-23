@@ -24,6 +24,7 @@ public class SystemInfoDto {
     private final List<Amoebae> readies;
     private final Map<Integer, List<Amoebae>> groupedAmoebasByCellId;
     private final List<Cell> cells;
+    private final Map<Cell, Integer> newCells = new HashMap<>();
     private final Map<Integer, Cell> cellsById;
     private Map<Integer, List<Cell>> neighboursByCentral;
     private Map<Integer, List<Cell>> farNeighboursByCentral;
@@ -148,5 +149,17 @@ public class SystemInfoDto {
         boolean yDifIsValid = yDif >= -3 && yDif <= 3;
 
         return xDifIsValid && yDifIsValid;
+    }
+
+    public void updateCell(Cell cell, Integer newLevel) {
+        if (!newCells.containsKey(cell)) {
+            newCells.put(cell, newLevel);
+            return;
+        }
+
+        newCells.put(
+            cell,
+            newCells.get(cell) + newLevel
+        );
     }
 }
