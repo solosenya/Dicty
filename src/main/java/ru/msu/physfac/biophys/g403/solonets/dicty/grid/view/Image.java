@@ -130,6 +130,7 @@ public class Image {
                 case RESTING -> color = Color.MAGENTA;
                 case EXCITED -> color = Color.GREEN;
                 case EMPTY -> color = Color.WHITE;
+                case PACESETTER -> color = Color.RED;
                 default -> {
                     log.error("Других состояний быть не может!");
                     throw new IllegalArgumentException("Других состояний быть не может!");

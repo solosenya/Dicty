@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.msu.physfac.biophys.g403.solonets.dicty.grid.model.Lattice;
+import ru.msu.physfac.biophys.g403.solonets.dicty.grid.model.PopulationService;
 import ru.msu.physfac.biophys.g403.solonets.dicty.grid.view.Image;
 
 import javax.transaction.Transactional;
@@ -19,14 +20,20 @@ import javax.transaction.Transactional;
 public class GridController {
 
     @Autowired
-    Lattice lattice;
+    private Lattice lattice;
 
     @Autowired
-    Image image;
+    private Image image;
+
+    @Autowired
+    private PopulationService populationService;
+
+    private int size = 0;
 
     @GetMapping("/createLattice")
     public ResponseEntity<byte[]> createGrid(@RequestParam int size) {
         lattice.setSize(size);
+        this.size = size;
 
         log.info("The lattice has been created!");
 
@@ -50,7 +57,7 @@ public class GridController {
             throw new IllegalArgumentException("Population level MUST be an integer between 0 and 100!");
         }
 
-        lattice.populate(population);
+        populationService.populate(population, size, size);
 
         return ResponseEntity
             .status(HttpStatus.OK)
@@ -68,7 +75,7 @@ public class GridController {
     @Transactional
     @GetMapping("/putCAMP")
     public ResponseEntity<byte[]> putCamp(int deviation) {
-        lattice.putCamp(deviation);
+//        lattice.putCamp(deviation);
 
         return ResponseEntity
             .status(HttpStatus.OK)

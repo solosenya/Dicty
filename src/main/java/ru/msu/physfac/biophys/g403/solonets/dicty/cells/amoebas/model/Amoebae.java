@@ -29,10 +29,31 @@ public class Amoebae {
     @Column(name = "time")
     private Integer time;
 
+    @Column(name = "destination")
+    private Destination destination;
+
     public enum State {
         EXCITED,
         RESTING,
         READY,
-        EMPTY
+        EMPTY,
+        PACESETTER
+    }
+
+    public enum Destination {
+        RIGHT(1, 0),
+        LEFT(-1, 0),
+        TOP(0, 1),
+        BOTTOM(0, -1);
+
+        @Getter
+        private final int difX;
+        @Getter
+        private final int difY;
+
+        Destination(int difX, int difY) {
+            this.difX = difX;
+            this.difY = difY;
+        }
     }
 }
