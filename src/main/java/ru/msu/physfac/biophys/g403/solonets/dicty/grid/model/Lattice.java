@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.ArrayList;
 
 import static ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model.Amoebae.State.*;
-import static ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model.Amoebae.Destination.*;
 
 @Getter
 @NoArgsConstructor
@@ -71,9 +70,9 @@ public class Lattice {
         List<Amoebae> amoebas = amoebaeRepository.findAll();
         SystemInfoDto systemInfoDto = new SystemInfoDto(cells, amoebas);
 
+        setDuties(systemInfoDto, threshold);
         degradeCamp(cells, systemInfoDto);
         diffuseCamp(cells, systemInfoDto);
-        setDuties(systemInfoDto, threshold);
         createPseudoBatch(systemInfoDto);
     }
 
@@ -276,7 +275,7 @@ public class Lattice {
 
     private void degradeCamp(List<Cell> cells, SystemInfoDto systemInfo) {
         for (Cell cell: cells) {
-            updateCellLevel(cell, -3, systemInfo);
+            updateCellLevel(cell, -9, systemInfo);
         }
     }
 
@@ -347,11 +346,10 @@ public class Lattice {
         Amoebae.Destination dest
     ) {
         Integer centralId = central.getId();
-        Optional<Cell> targetOpt = systemInfoDto.getNeighboursByCentralIdWithDest(centralId, dest)
-            .stream()
-            .reduce((a, b) -> b.getCampLevel() > a.getCampLevel() ?
-                b : a
-            );
+        List<Cell> correctNeighbours = systemInfoDto.getNeighboursByCentralIdWithDest(centralId, dest);
+        Optional<Cell> targetOpt = correctNeighbours.stream()
+            .skip(random.nextInt(correctNeighbours.size()))
+            .findFirst();
 
         boolean noTarget = targetOpt.isEmpty();
         if (noTarget) return Optional.empty();

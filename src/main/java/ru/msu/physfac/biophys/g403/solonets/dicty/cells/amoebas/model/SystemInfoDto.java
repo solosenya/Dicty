@@ -6,15 +6,7 @@ import ru.msu.physfac.biophys.g403.solonets.dicty.cells.model.Cell;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model.Amoebae.State.RESTING;
-import static ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model.Amoebae.State.READY;
-import static ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model.Amoebae.State.PACESETTER;
-import static ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model.Amoebae.State.EXCITED;
-
-import static ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model.Amoebae.Destination.RIGHT;
-import static ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model.Amoebae.Destination.LEFT;
-import static ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model.Amoebae.Destination.TOP;
-import static ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model.Amoebae.Destination.BOTTOM;
+import static ru.msu.physfac.biophys.g403.solonets.dicty.cells.amoebas.model.Amoebae.State.*;
 
 @Getter
 public class SystemInfoDto {
@@ -137,8 +129,8 @@ public class SystemInfoDto {
         int xDif = cell.getX() - otherCell.getX();
         int yDif = cell.getY() - otherCell.getY();
 
-        boolean xDifIsValid = xDif >= -3 && xDif <= 3;
-        boolean yDifIsValid = yDif >= -3 && yDif <= 3;
+        boolean xDifIsValid = xDif >= -2 && xDif <= 2;
+        boolean yDifIsValid = yDif >= -2 && yDif <= 2;
 
         return xDifIsValid && yDifIsValid;
     }
