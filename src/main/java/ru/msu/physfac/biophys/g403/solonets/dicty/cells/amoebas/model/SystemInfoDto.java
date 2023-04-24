@@ -76,20 +76,12 @@ public class SystemInfoDto {
         for (Cell neighbour : allNeighbours) {
             int xDif = neighbour.getX() - central.getX();
             int yDif = neighbour.getY() - central.getY();
-            if (dest.equals(RIGHT) && xDif == RIGHT.getDifX()) {
-                correctNeighbours.add(neighbour);
-                continue;
-            }
-            if (dest.equals(LEFT) && xDif == LEFT.getDifX()) {
-                correctNeighbours.add(neighbour);
-                continue;
-            }
-            if (dest.equals(TOP) && yDif == TOP.getDifY()) {
-                correctNeighbours.add(neighbour);
-                continue;
-            }
-            if (dest.equals(BOTTOM) && yDif == BOTTOM.getDifY()) {
-                correctNeighbours.add(neighbour);
+
+            Set<Amoebae.Destination> destSet = Amoebae.Destination.selectNeighbouringDests(dest);
+            for (Amoebae.Destination correspondingDest : destSet) {
+                boolean shouldBeAdded = xDif == correspondingDest.getDifX() &&
+                    yDif == correspondingDest.getDifY();
+                if (shouldBeAdded) correctNeighbours.add(neighbour);
             }
         }
         return correctNeighbours;

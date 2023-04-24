@@ -71,8 +71,8 @@ public class Lattice {
         List<Amoebae> amoebas = amoebaeRepository.findAll();
         SystemInfoDto systemInfoDto = new SystemInfoDto(cells, amoebas);
 
-//        degradeCamp(cells, systemInfoDto);
-//        diffuseCamp(cells, threshold, systemInfoDto);
+        degradeCamp(cells, systemInfoDto);
+        diffuseCamp(cells, systemInfoDto);
         setDuties(systemInfoDto, threshold);
         createPseudoBatch(systemInfoDto);
     }
@@ -213,9 +213,7 @@ public class Lattice {
             if (targetCellOpt.isEmpty()) continue;
             Cell targetCell = targetCellOpt.get();
 
-            if (targetCell.equals(cell)) {
-                readyToResting(threshold, cell, amoebae, systemInfoDto);
-            } else {
+            if (!targetCell.equals(cell)) {
                 Amoebae.Destination dest = calcDestination(cell, targetCell);
                 readyToExcited(amoebae, threshold, cell, systemInfoDto, dest);
             }
@@ -265,33 +263,20 @@ public class Lattice {
         int xDif = targetCell.getX() - cell.getX();
         int yDif = targetCell.getY() - cell.getY();
 
-        if (xDif == 1 && yDif == 1) {
-            return random.nextInt(2) == 1 ? TOP : RIGHT;
+        for (Amoebae.Destination dest : Amoebae.Destination.values()) {
+            int destX = dest.getDifX();
+            int destY = dest.getDifY();
+
+            boolean destFound = destX == xDif && destY == yDif;
+            if (destFound) return dest;
         }
-        if (xDif == 1 && yDif == -1) {
-            return random.nextInt(2) == 1 ? BOTTOM : RIGHT;
-        }
-        if (xDif == -1 && yDif == 1) {
-            return random.nextInt(2) == 1 ? TOP : LEFT;
-        }
-        if (xDif == -1 && yDif == -1) {
-            return random.nextInt(2) == 1 ? BOTTOM : LEFT;
-        }
-        if (xDif == 1) return RIGHT;
-        if (xDif == -1) return LEFT;
-        if (yDif == 1) return TOP;
-        if (yDif == -1) return BOTTOM;
 
         return null;
     }
 
     private void degradeCamp(List<Cell> cells, SystemInfoDto systemInfo) {
         for (Cell cell: cells) {
-            boolean doDegrade = random.nextInt(1, 101) > 0;
-
-            if (doDegrade) {
-                updateCellLevel(cell, -3, systemInfo);
-            }
+            updateCellLevel(cell, -3, systemInfo);
         }
     }
 
@@ -340,21 +325,20 @@ public class Lattice {
         SystemInfoDto systemInfoDto
     ) {
         Integer centralId = central.getId();
-        Optional<Cell> targetOpt = systemInfoDto.getNeighboursByCentralId(centralId)
+        return systemInfoDto.getNeighboursByCentralId(centralId)
             .stream()
             .filter(cell -> cell.getCampLevel() >= threshold)
             .reduce((a, b) -> b.getCampLevel() > a.getCampLevel() ?
                 b : a
             );
+//        boolean noTarget = targetOpt.isEmpty();
+//        if (noTarget) return Optional.empty();
+//
+//        Cell target = targetOpt.get();
+//        boolean shouldStay = central.getCampLevel() > target.getCampLevel();
+//        if (shouldStay) return Optional.of(central);
 
-        boolean noTarget = targetOpt.isEmpty();
-        if (noTarget) return Optional.empty();
-
-        Cell target = targetOpt.get();
-        boolean shouldStay = central.getCampLevel() > target.getCampLevel();
-        if (shouldStay) return Optional.of(central);
-
-        return Optional.of(target);
+//        return Optional.of(target);
     }
 
     private Optional<Cell> getCellWithHighestLevelForExcited(
@@ -392,24 +376,16 @@ public class Lattice {
         return Optional.of(highestLevelCell);
     }
 
-    public void diffuseCamp(List<Cell> cells, int threshold, SystemInfoDto systemInfoDto) {
-        List<Cell> highCells = cells
-            .stream()
-            .filter(c -> c.getCampLevel() > threshold)
-            .limit(30)
-            .toList();
-
-        for (Cell cell : highCells) {
+    public void diffuseCamp(List<Cell> cells, SystemInfoDto systemInfoDto) {
+        for (Cell cell : cells) {
             Integer cellId = cell.getId();
             List<Cell> neighbours = systemInfoDto.getNeighboursByCentralId(cellId);
 
-            Cell lowestCell = getCellWithLowestLevel(neighbours)
-                .orElse(cell);
-
-            if (lowestCell.equals(cell)) return;
-
-            updateCellLevel(cell, - threshold / 30, systemInfoDto);
-            updateCellLevel(lowestCell, + threshold / 30, systemInfoDto);
+            for (Cell neighbour : neighbours) {
+                int addition = (cell.getCampLevel() - neighbour.getCampLevel()) / 32;
+                updateCellLevel(cell, - addition, systemInfoDto);
+                updateCellLevel(neighbour, addition, systemInfoDto);
+            }
         }
     }
 }

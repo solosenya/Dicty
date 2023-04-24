@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.persistence.*;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -44,7 +45,11 @@ public class Amoebae {
         RIGHT(1, 0),
         LEFT(-1, 0),
         TOP(0, 1),
-        BOTTOM(0, -1);
+        BOTTOM(0, -1),
+        LEFT_BOTTOM(-1, -1),
+        RIGHT_BOTTOM(1, -1),
+        LEFT_TOP(-1, 1),
+        RIGHT_TOP(1, 1);
 
         @Getter
         private final int difX;
@@ -54,6 +59,19 @@ public class Amoebae {
         Destination(int difX, int difY) {
             this.difX = difX;
             this.difY = difY;
+        }
+
+        public static Set<Destination> selectNeighbouringDests(Destination dest) {
+            return switch (dest) {
+                case RIGHT -> Set.of(RIGHT_TOP, RIGHT_BOTTOM, dest);
+                case LEFT -> Set.of(LEFT_BOTTOM, LEFT_TOP, dest);
+                case TOP -> Set.of(LEFT_TOP, RIGHT_TOP, dest);
+                case BOTTOM -> Set.of(LEFT_BOTTOM, RIGHT_BOTTOM, dest);
+                case LEFT_BOTTOM -> Set.of(LEFT, BOTTOM, dest);
+                case RIGHT_BOTTOM -> Set.of(RIGHT, BOTTOM, dest);
+                case LEFT_TOP -> Set.of(LEFT, TOP, dest);
+                case RIGHT_TOP -> Set.of(RIGHT, TOP, dest);
+            };
         }
     }
 }
