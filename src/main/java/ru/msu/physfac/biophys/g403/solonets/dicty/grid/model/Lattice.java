@@ -28,6 +28,7 @@ public class Lattice {
     private final int EXCITED_TIME = 8;
     private final int PACESETTER_TIME = 50;
     private final int READY_TIME = 1;
+    private final int TIME_TO_CHANGE_DEST = 10;
 
     private int width;
     private int length;
@@ -131,19 +132,58 @@ public class Lattice {
                 continue;
             }
 
+            if (time == TIME_TO_CHANGE_DEST) {
+                Cell cell = systemInfo.findCellByAmoebae(amoebae);
+
+                Optional<Cell> targetCellOpt = getCellWithHighestLevel(
+                    cell,
+                    threshold,
+                    systemInfo
+                );
+                if (targetCellOpt.isEmpty()) continue;
+
+                Cell targetCell = targetCellOpt.get();
+                if (targetCell.equals(cell)) continue;
+
+                Amoebae.Destination dest = calcDestination(cell, targetCell);
+                assert dest != null;
+                if (dest.equals(amoebae.getDestination())) continue;
+
+                amoebaeRepository.updateAmoebaeFully(
+                    EXCITED,
+                    dest,
+                    EXCITED_TIME,
+                    amoebae.getPosition(),
+                    amoebae.getCellId(),
+                    amoebae.getId()
+                );
+                continue;
+            }
+
             Integer cellId = amoebae.getCellId();
             Integer amoebaeId = amoebae.getId();
             Cell cell = systemInfo.findCellByAmoebae(amoebae);
             Amoebae.Destination dest = amoebae.getDestination();
 
             Optional<Cell> targetCellOpt = getCellWithHighestLevelForExcited(cell, systemInfo, dest);
-            if (targetCellOpt.isEmpty()) continue;
+            if (targetCellOpt.isEmpty()) {
+                int newTime = ++time;
+                int id = amoebae.getId();
+                amoebaeRepository.setTime(newTime, id);
+                continue;
+            }
             Cell targetCell = targetCellOpt.get();
 
             Integer targetCellId = targetCell.getId();
             Optional<Integer> positionOpt = getPosition(targetCellId, groupedAmoebasByCellId);
 
-            if (positionOpt.isEmpty()) continue;
+            if (positionOpt.isEmpty()) {
+                int newTime = ++time;
+                int id = amoebae.getId();
+                amoebaeRepository.setTime(newTime, id);
+                continue;
+            }
+
             int position = positionOpt.get();
 
             int lastPosition = amoebae.getPosition();
