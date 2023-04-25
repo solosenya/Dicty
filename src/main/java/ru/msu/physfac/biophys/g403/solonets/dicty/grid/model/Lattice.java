@@ -77,8 +77,31 @@ public class Lattice {
         createPseudoBatch(systemInfoDto);
     }
 
+    public void putCamp(int deviation) {
+        List<Cell> cells = cellRepository.findAll();
+
+        for (Cell cell : cells) {
+            boolean shouldPutCamp = random.nextInt(0, 10) < 2;
+
+            if (!shouldPutCamp) continue;
+
+            double level = Math.abs(
+                    random.nextGaussian(0, deviation)
+            );
+
+            if (level > 255) {
+                level = 0;
+            }
+
+            Integer levelInt = (int) level;
+            Integer cellId = cell.getId();
+            cellRepository.setLevel(levelInt, cellId);
+            image.putCampToCell(cell, levelInt);
+        }
+    }
+
     private void setDuties(SystemInfoDto systemInfoDto, int threshold) {
-        setPace(systemInfoDto, threshold);
+//        setPace(systemInfoDto, threshold);
         excitedToResting(systemInfoDto, threshold);
         restingToReady(systemInfoDto);
         readyToDestination(systemInfoDto, threshold);

@@ -43,7 +43,7 @@ public class PopulationService {
         }
 
         createReadies(indexes, width, length);
-        createPacesetters(width, length);
+//        createPacesetters(width, length);
     }
 
     private void createPacesetters(int width, int length) {

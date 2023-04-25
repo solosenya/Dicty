@@ -75,7 +75,7 @@ public class GridController {
     @Transactional
     @GetMapping("/putCAMP")
     public ResponseEntity<byte[]> putCamp(int deviation) {
-//        lattice.putCamp(deviation);
+        lattice.putCamp(deviation);
 
         return ResponseEntity
             .status(HttpStatus.OK)
